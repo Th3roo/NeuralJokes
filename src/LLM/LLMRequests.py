@@ -24,7 +24,7 @@ class LLMRequester:
             system_prompt_path = os.getenv("BOT_SYSTEM_PROMT_PATH")
             if system_prompt_path:
                 try:
-                    with open(system_prompt_path, "r") as f:
+                    with open(system_prompt_path, "r", encoding="UTF-8") as f:
                         self.system_prompt = f.read()
                     logger.info(f"System prompt loaded from: {system_prompt_path}")
                 except FileNotFoundError:
