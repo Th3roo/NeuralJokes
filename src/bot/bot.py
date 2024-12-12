@@ -15,6 +15,16 @@ llm_requester = LLMRequester()
 
 last_joke_time = 0
 
+def set_bot_commands():
+    commands = [
+        telebot.types.BotCommand("/start", "Начать работу с ботом"),
+        telebot.types.BotCommand("/generate_random_joke", "Сгенерировать случайную шутку"),
+        telebot.types.BotCommand("/generate_joke", "Сгенерировать шутку на тему <тема>")
+    ]
+    bot.set_my_commands(commands)
+
+set_bot_commands()
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     logger.info(f"Received /start command from user {message.from_user.id}")
