@@ -25,10 +25,12 @@ class LLMRequester:
             logger.debug("Using system prompt from constructor argument.")
         else:
             system_prompt_path = os.getenv("BOT_SYSTEM_PROMT_PATH")
+
             if system_prompt_path:
                 try:
                     with open(system_prompt_path, "r", encoding="UTF-8") as f:
                         self.system_prompt = f.read()
+
                     logger.info(f"System prompt loaded from: {system_prompt_path}")
                 except FileNotFoundError:
                     logger.warning(f"System prompt file not found at {system_prompt_path}")
@@ -74,8 +76,10 @@ class LLMRequester:
                     if response.status == 200:
                         response_data = await response.json()
                         response_content = response_data['choices'][0]['message']['content']
+
                         logger.info("Response generated successfully.")
                         logger.debug(f"Response content: {response_content}")
+
                         return response_content
                     else:
                         logger.error(f"Error during LLM request: {response.status} - {await response.text()}")
