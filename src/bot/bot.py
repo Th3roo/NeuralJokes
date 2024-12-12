@@ -37,7 +37,9 @@ def generate_random_joke(message):
     current_time = time.time()
     if current_time - last_joke_time < BOT_JOKE_GENERATION__COOLDOWN:
         remaining_time = int(BOT_JOKE_GENERATION__COOLDOWN - (current_time - last_joke_time))
+
         bot.reply_to(message, f"Please wait {remaining_time} more seconds before generating another joke.")
+
         logger.info(f"User {message.from_user.id} requested a joke too soon. Remaining time: {remaining_time} seconds.")
         return
 
@@ -61,33 +63,41 @@ def generate_random_joke(message):
 @bot.message_handler(commands=['generate_joke'])
 def generate_joke_with_topic(message):
     logger.info(f"Received /generate_joke command from user {message.from_user.id}")
+
     global last_joke_time
     current_time = time.time()
+
     if current_time - last_joke_time < BOT_JOKE_GENERATION__COOLDOWN:
         remaining_time = int(BOT_JOKE_GENERATION__COOLDOWN - (current_time - last_joke_time))
+
         bot.reply_to(message, f"Please wait {remaining_time} more seconds before generating another joke.")
+
         logger.info(f"User {message.from_user.id} requested a joke too soon. Remaining time: {remaining_time} seconds.")
         return
 
     last_joke_time = current_time
     topic = message.text.split(' ', 1)
+
     if len(topic) > 1:
         topic = topic[1]
-        bot.reply_to(message, f"Generating a joke on the topic: {topic}...")
-
+        processing_message = bot.reply_to(message, f"Generating a joke on the topic: {topic}...")
+        
         for attempt in range(BOT_JOKE_GENERATION__MAX_RETRIES):
             response = llm_requester.generate_response(f"Generate a joke on the topic: {topic}")
             try:
                 joke = json.loads(response)['joke']
-                bot.reply_to(message, joke)
+                bot.edit_message_text(chat_id=message.chat.id, message_id=processing_message.message_id, text=joke)
                 logger.info(f"Generated a joke on the topic '{topic}' for user {message.from_user.id}")
                 break
             except (json.JSONDecodeError, KeyError):
                 logger.warning(
                     f"Attempt {attempt + 1} to generate a joke on the topic '{topic}' for user {message.from_user.id} failed. Retrying...")
+                bot.edit_message_text(chat_id=message.chat.id, message_id=processing_message.message_id,
+                                      text=f"Generating a joke on the topic: {topic}... (Attempt {attempt + 1})")
+                
                 if attempt == BOT_JOKE_GENERATION__MAX_RETRIES - 1:
-                    bot.reply_to(message,
-                                 "Sorry, I couldn't generate a joke for this topic right now. Please try again later.")
+                    bot.edit_message_text(chat_id=message.chat.id, message_id=processing_message.message_id,
+                                          text="Sorry, I couldn't generate a joke for this topic right now. Please try again later.")
                     logger.error(
                         f"Failed to generate a joke on the topic '{topic}' for user {message.from_user.id} after multiple attempts.")
     else:
