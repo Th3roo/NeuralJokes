@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from src.bot.bot import JokeBot
 from src.LLM.LLMRequests import LLMRequester
