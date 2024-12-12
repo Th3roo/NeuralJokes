@@ -17,9 +17,9 @@ last_joke_time = 0
 
 def set_bot_commands():
     commands = [
-        telebot.types.BotCommand("/start", "Начать работу с ботом"),
-        telebot.types.BotCommand("/generate_random_joke", "Сгенерировать случайную шутку"),
-        telebot.types.BotCommand("/generate_joke", "Сгенерировать шутку на тему <тема>")
+        telebot.types.BotCommand("/start", "Start work"),
+        telebot.types.BotCommand("/generate_random_joke", "Generate random joke"),
+        telebot.types.BotCommand("/generate_joke", "Generatre joke on <topic>")
     ]
     bot.set_my_commands(commands)
 
