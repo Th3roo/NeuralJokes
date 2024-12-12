@@ -1,6 +1,11 @@
+import asyncio
 import logging
 
-from src.bot.bot import bot
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+
+from src.bot.bot import JokeBot
+from src.LLM.LLMRequests import LLMRequester
+from config.config import BOT_TOKEN
 
 # Logger setup
 logging.basicConfig(
@@ -11,6 +16,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
+async def main():
     logger.info("Starting Bot...")
-    bot.polling()
+
+    llm_requester = LLMRequester()
+    storage = MemoryStorage()
+    bot = JokeBot(llm_requester)
+
+    await bot.start_polling()
+
+if __name__ == "__main__":
+    asyncio.run(main())

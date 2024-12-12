@@ -1,12 +1,15 @@
 import openai
 import os
 import logging
+import aiohttp
+
+from typing import Optional
 
 # Logger setup
 logger = logging.getLogger(__name__)
 
 class LLMRequester:
-    def __init__(self, api_base=None, api_key=None, model=None, system_prompt=None):
+    def __init__(self, api_base: Optional[str] = None, api_key: Optional[str] = None, model: Optional[str] = None, system_prompt: Optional[str] = None):
         logger.info("Initializing LLMRequester...")
 
         self.api_base = api_base or os.getenv("BOT_API__BASE_URL")
@@ -37,7 +40,7 @@ class LLMRequester:
         openai.api_base = self.api_base
         openai.api_key = self.api_key
 
-    def generate_response(self, user_message, temperature=None, max_tokens=None):
+    async def generate_response_async(self, user_message: str, temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> str:
         logger.info("Generating response...")
 
         temperature = temperature or float(os.getenv("BOT_GENERATION__TEMPERATURE", 0.8))
@@ -54,16 +57,29 @@ class LLMRequester:
         logger.debug(f"Messages: {messages}")
 
         try:
-            response = openai.ChatCompletion.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            response_content = response['choices'][0]['message']['content']
-            logger.info("Response generated successfully.")
-            logger.debug(f"Response content: {response_content}")
-            return response_content
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.api_base}/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": self.model,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens
+                    }
+                ) as response:
+                    if response.status == 200:
+                        response_data = await response.json()
+                        response_content = response_data['choices'][0]['message']['content']
+                        logger.info("Response generated successfully.")
+                        logger.debug(f"Response content: {response_content}")
+                        return response_content
+                    else:
+                        logger.error(f"Error during LLM request: {response.status} - {await response.text()}")
+                        return "Sorry, an error occurred while processing the request."
         except Exception as e:
             logger.error(f"Error during LLM request: {e}")
             return "Sorry, an error occurred while processing the request."
