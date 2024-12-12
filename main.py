@@ -12,8 +12,10 @@ from config.config import BOT_TOKEN
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
-    filename='logs/bot.log',
-    filemode='a'
+    handlers=[
+        logging.FileHandler('logs/bot.log', mode='a'),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
