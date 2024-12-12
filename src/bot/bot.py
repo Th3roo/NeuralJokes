@@ -4,7 +4,7 @@ import json
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.filters.state import State, StatesGroup
 
 from src.LLM.LLMRequests import LLMRequester
 from config.config import BOT_TOKEN, BOT_JOKE_GENERATION__COOLDOWN, BOT_JOKE_GENERATION__MAX_RETRIES
