@@ -1,0 +1,17 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+BOT_API__BASE_URL = os.getenv("BOT_API__BASE_URL")
+BOT_API__MODEL = os.getenv("BOT_API__MODEL")
+BOT_API__API_KEY = os.getenv("BOT_API__API_KEY")
+
+BOT_SYSTEM_PROMT_PATH = os.getenv("BOT_SYSTEM_PROMT_PATH")
+BOT_GENERATION__TEMPERATURE = float(os.getenv("BOT_GENERATION__TEMPERATURE"))
+BOT_GENERATION__MAX_TOKENS = int(os.getenv("BOT_GENERATION__MAX_TOKENS"))
+
+BOT_JOKE_GENERATION__COOLDOWN = int(os.getenv("BOT_JOKE_GENERATION__COOLDOWN"))
