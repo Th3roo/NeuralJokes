@@ -2,8 +2,9 @@ import openai
 import os
 import logging
 import aiohttp
+import json
 
-from typing import Optional
+from typing import Optional, AsyncIterator
 
 # Logger setup
 logger = logging.getLogger(__name__)
@@ -87,3 +88,71 @@ class LLMRequester:
         except Exception as e:
             logger.error(f"Error during LLM request: {e}")
             return "Sorry, an error occurred while processing the request."
+
+    async def generate_response_streaming(self, user_message: str, temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> AsyncIterator[str]:
+        """
+        Генерирует ответ в потоковом режиме, возвращая итератор по частям ответа.
+        """
+        logger.info("Generating streaming response...")
+
+        temperature = temperature or float(os.getenv("BOT_GENERATION__TEMPERATURE", 0.8))
+        max_tokens = max_tokens or int(os.getenv("BOT_GENERATION__MAX_TOKENS", 200))
+
+        logger.debug(f"Temperature: {temperature}")
+        logger.debug(f"Max Tokens: {max_tokens}")
+
+        messages = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": user_message})
+
+        logger.debug(f"Messages: {messages}")
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.api_base}/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": self.model,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                        "stream": True  # Включаем потоковый режим
+                    }
+                ) as response:
+                    if response.status == 200:
+                        async for chunk in response.content:
+                            chunk_str = chunk.decode('utf-8')
+                            
+                            # Разделяем чанк на отдельные строки
+                            lines = chunk_str.split('\n')
+                            for line in lines:
+                                if line.startswith("data:"):
+                                    line_data = line[5:].strip()
+                                    
+                                    # Проверяем, не является ли строка '[DONE]'
+                                    if line_data == '[DONE]':
+                                        logger.info("Streaming response completed.")
+                                        return
+                                    
+                                    try:
+                                        # Пытаемся декодировать JSON из строки
+                                        data = json.loads(line_data)
+                                        
+                                        # Проверяем наличие ключа 'choices' и 'content'
+                                        if 'choices' in data and data['choices'] and 'content' in data['choices'][0]['delta']:
+                                            delta_content = data['choices'][0]['delta']['content']
+                                            
+                                            # Возвращаем часть ответа
+                                            yield delta_content
+                                    except json.JSONDecodeError:
+                                        logger.warning(f"Failed to decode JSON from line: {line_data}")
+                    else:
+                        logger.error(f"Error during LLM request: {response.status} - {await response.text()}")
+                        yield "Sorry, an error occurred while processing the request."
+        except Exception as e:
+            logger.error(f"Error during LLM request: {e}")
