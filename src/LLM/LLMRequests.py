@@ -125,6 +125,7 @@ class LLMRequester:
                     }
                 ) as response:
                     if response.status == 200:
+                        last_received_content = ""
                         async for chunk in response.content:
                             chunk_str = chunk.decode('utf-8')
                             
@@ -147,8 +148,11 @@ class LLMRequester:
                                         if 'choices' in data and data['choices'] and 'content' in data['choices'][0]['delta']:
                                             delta_content = data['choices'][0]['delta']['content']
                                             
-                                            # Возвращаем часть ответа
-                                            yield delta_content
+                                            # Проверяем, что получили новый контент
+                                            if delta_content != last_received_content:
+                                                last_received_content = delta_content
+                                                # Возвращаем часть ответа
+                                                yield delta_content
                                     except json.JSONDecodeError:
                                         logger.warning(f"Failed to decode JSON from line: {line_data}")
                     else:
