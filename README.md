@@ -2,7 +2,7 @@
 
 ## Description
 
-NeuralJokes is a Telegram bot that generates jokes using machine learning models. It can generate random jokes or jokes on a given topic. The bot interacts with users through Telegram and leverages various APIs for joke generation and handling user commands.
+NeuralJokes is a Telegram bot that generates jokes using LLM. It can generate random jokes or jokes on a given topic. The bot interacts with users through Telegram
 
 ## Commands
 
@@ -94,9 +94,9 @@ NeuralJokes is a Telegram bot that generates jokes using machine learning models
     ./llama-server -m <path to the model> -c <context size> --port <port>
     ```
 
-    Example (using recommended model `models/7B/ggml-model-q4_0.bin`):
+    Example (using recommended model `[models/Llama-3.1-8B-JokesMachine](https://huggingface.co/kentfoong/Llama-3.1-8B-JokesMachine)`):
     ```bash
-    ./llama-server -m models/7B/ggml-model-q4_0.bin -c 2048 --port 8080
+    ./llama-server -m models/Llama-3.1-8B-JokesMachine.gguf -c 2048 --port 8080
     ```
 
 ### As a Docker Container
@@ -111,9 +111,9 @@ NeuralJokes is a Telegram bot that generates jokes using machine learning models
     docker run -d -p 8080:8080 -v <path to the directory with models>:/models llama-cpp-server -m /models/<model name> -c <context size>
     ```
 
-    Example (using recommended model `models/7B/ggml-model-q4_0.bin`):
+    Example (using recommended model `[models/Llama-3.1-8B-JokesMachine](https://huggingface.co/kentfoong/Llama-3.1-8B-JokesMachine)`):
     ```bash
-    docker run -d -p 8080:8080 -v $(pwd)/models:/models llama-cpp-server -m /models/7B/ggml-model-q4_0.bin -c 2048
+    docker run -d -p 8080:8080 -v $(pwd)/models:/models llama-cpp-server -m /models/Llama-3.1-8B-JokesMachine.gguf -c 4096
     ```
 
 ## Running the Bot
