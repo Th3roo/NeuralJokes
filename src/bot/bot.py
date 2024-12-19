@@ -81,11 +81,16 @@ class JokeBot:
 
     async def start_generate_joke_with_topic(self, message: types.Message, state: FSMContext):
         logger.info(f"Received /generate_joke command from user {message.from_user.id}")
+        
+        # Проверяем, есть ли тема в сообщении
+        command_args = message.text.split(" ", 1)
+        if len(command_args) > 1:
+            await self.generate_joke_with_topic(message, state, command_args[1])
+        else:
+            await message.reply("Please enter a topic for the joke.")
+            await state.set_state(Form.waiting_for_topic)
 
-        await message.reply("Please enter a topic for the joke.")
-        await state.set_state(Form.waiting_for_topic)
-
-    async def generate_joke_with_topic(self, message: types.Message, state: FSMContext):
+    async def generate_joke_with_topic(self, message: types.Message, state: FSMContext, topic: str = None):
         user_id = message.from_user.id
         current_time = time.time()
 
@@ -99,7 +104,10 @@ class JokeBot:
             return
 
         self.last_joke_time[user_id] = current_time
-        topic = message.text
+        
+        # Если тема не передана, берем ее из сообщения
+        if topic is None:
+            topic = message.text
 
         if topic:
             processing_message = await message.reply(f"Generating a joke on the topic: {topic}...")
