@@ -81,12 +81,12 @@ NeuralJokes is a Telegram bot that generates jokes using LLM. It can generate ra
     - **Quick Start:**
         For Linux:
         ```bash
-        ./llama-server -m models/7B/ggml-model.gguf -c 4096 --host 0.0.0.0 --port 1234
+        ./llama-server -m models/7B/model.gguf -c 4096 --host 0.0.0.0 --port 1234
         ```
 
         For Windows:
         ```bash
-        llama-server.exe -m models\7B\ggml-model.gguf -c 4096 --host 0.0.0.0 --port 1234
+        llama-server.exe -m models\7B\model.gguf -c 4096 --host 0.0.0.0 --port 1234
         ```
 
 2. **Run the server:**
