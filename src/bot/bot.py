@@ -106,12 +106,8 @@ class JokeBot:
         Генерирует шутку и обновляет сообщение в реальном времени по мере поступления токенов.
         """
         full_response = ""
-        last_response = ""
         async for response_part in self.llm_requester.generate_response_streaming(prompt):
-            full_response += response_part
-            # Проверяем, изменилось ли сообщение перед отправкой обновления
-            if full_response != last_response:
-                await processing_message.edit_text(full_response)
-                last_response = full_response
-
+           if response_part and full_response != response_part:
+               await processing_message.edit_text(response_part)
+               full_response = response_part
         logger.info(f"Completed streaming response for prompt: '{prompt}'")
