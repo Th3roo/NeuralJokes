@@ -48,15 +48,11 @@ class LLMRequester:
         Генерирует ответ в потоковом режиме, возвращая итератор по частям ответа.
         """
         logger.info("Generating streaming response...")
-
         temperature = temperature or float(os.getenv("BOT_GENERATION__TEMPERATURE", 0.8))
         max_tokens = max_tokens or int(os.getenv("BOT_GENERATION__MAX_TOKENS", 200))
-
         logger.debug(f"Temperature: {temperature}")
         logger.debug(f"Max Tokens: {max_tokens}")
-
         messages = []
-        
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
         messages.append({"role": "user", "content": user_message})
@@ -98,7 +94,7 @@ class LLMRequester:
                                             yield full_response
                                             return
                                         elif 'content' in delta:
-                                            yield full_response
+                                            yield delta['content']
                                 except json.JSONDecodeError:
                                     logger.warning(f"Failed to decode JSON from line: {data}")
                     else:
@@ -107,4 +103,5 @@ class LLMRequester:
         except Exception as e:
             logger.error(f"Error during LLM request: {e}")
             yield "Sorry, an error occurred while processing the request."
+
 
