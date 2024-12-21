@@ -107,7 +107,7 @@ class JokeBot:
         """
         full_response = ""
         async for response_part in self.llm_requester.generate_response_streaming(prompt):
-           if response_part and full_response != response_part:
-               await processing_message.edit_text(response_part)
-               full_response = response_part
+            if response_part:
+                full_response += response_part
+                await processing_message.edit_text(full_response)
         logger.info(f"Completed streaming response for prompt: '{prompt}'")

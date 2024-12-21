@@ -57,6 +57,7 @@ class LLMRequester:
             messages.append({"role": "system", "content": self.system_prompt})
         messages.append({"role": "user", "content": user_message})
         logger.debug(f"Messages: {messages}")
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -86,22 +87,22 @@ class LLMRequester:
                                     data_json = json.loads(data)
                                     if 'choices' in data_json and data_json['choices']:
                                         delta = data_json['choices'][0].get('delta', {})
-                                        if delta.get('role') == 'assistant' and 'content' in delta:
+                                        if delta.get('content'):
                                             full_response += delta['content']
+                                            yield delta['content']
                                         finish_reason = data_json['choices'][0].get('finish_reason')
                                         if finish_reason == "stop":
                                             logger.info(f"Streaming response completed with stop reason. Full response: {full_response}")
-                                            yield full_response
                                             return
-                                        elif 'content' in delta:
-                                            yield delta['content']
                                 except json.JSONDecodeError:
                                     logger.warning(f"Failed to decode JSON from line: {data}")
                     else:
                         logger.error(f"Error during LLM request: {response.status} - {await response.text()}")
-                        yield "Sorry, an error occurred while processing the request."
+                        yield "Извините, произошла ошибка при обработке запроса."
+
         except Exception as e:
             logger.error(f"Error during LLM request: {e}")
-            yield "Sorry, an error occurred while processing the request."
+            yield "Извините, произошла ошибка при обработке запроса."
+
 
 
