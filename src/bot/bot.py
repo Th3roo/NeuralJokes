@@ -1,5 +1,6 @@
 import time
 import logging
+import asyncio
 
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.filters import Command
@@ -7,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 from src.LLM.LLMRequests import LLMRequester
-from config.config import BOT_JOKE_GENERATION__COOLDOWN
+from config.config import BOT_JOKE_GENERATION__COOLDOWN, BOT_JOKE_GENERATION__STREAMING_DELAY
 
 # Logger setup
 logger = logging.getLogger(__name__)
@@ -114,10 +115,15 @@ class JokeBot:
                         # Проверяем, отличается ли новое сообщение от предыдущего отправленного
                         if full_response != last_sent_message:
                             try:
+                                # Редактируем сообщение только если оно изменилось
                                 await processing_message.edit_text(full_response)
                                 last_sent_message = full_response
                             except Exception as e:
-                                logger.warning(f"Failed to edit message: {e}")
+                                if "message is not modified" not in str(e):
+                                    logger.warning(f"Failed to edit message: {e}")
+                        
+                        # Добавляем задержку между обновлениями сообщения
+                        await asyncio.sleep(BOT_JOKE_GENERATION__STREAMING_DELAY)
                 logger.info(f"Completed streaming response for prompt: '{prompt}'")
             except Exception as e:
                 logger.error(f"Error during streaming response: {e}")
