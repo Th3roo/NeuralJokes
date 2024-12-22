@@ -64,22 +64,16 @@ class LLMRequester:
             return ""
 
     async def generate_response_streaming(self, user_message: str, temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> AsyncIterator[str]:
-        """
-        Generates a response in streaming mode, returning an iterator over the response parts.
-        """
+        """Generates a response in streaming mode, returning an iterator over the response parts."""
         logger.info("Generating streaming response...")
-
         temperature = temperature or float(os.getenv("BOT_GENERATION__TEMPERATURE", 0.8))
         max_tokens = max_tokens or int(os.getenv("BOT_GENERATION__MAX_TOKENS", 200))
-
         logger.debug(f"Temperature: {temperature}")
         logger.debug(f"Max Tokens: {max_tokens}")
 
         messages = []
-
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
-
         messages.append({"role": "user", "content": user_message})
         logger.debug(f"Messages: {messages}")
 
@@ -99,40 +93,42 @@ class LLMRequester:
                         "stream": True
                     }
                 ) as response:
-                    if response.status == 200:
-                        full_response = ""
-
-                        async for line in response.content:
-                            line = line.decode('utf-8').strip()
-
-                            if line.startswith("data:"):
-                                data = line[5:].strip()
-
-                                if data == "[DONE]":
-                                    logger.info("Streaming response completed.")
-                                    return
-
-                                try:
-                                    data_json = json.loads(data)
-
-                                    if 'choices' in data_json and data_json['choices']:
-                                        delta = data_json['choices'][0].get('delta', {})
-
-                                        if delta.get('content'):
-                                            full_response += delta['content']
-                                            yield delta['content']
-
-                                        finish_reason = data_json['choices'][0].get('finish_reason')
-
-                                        if finish_reason == "stop":
-                                            logger.info(f"Streaming response completed with stop reason. Full response: {full_response}")
-                                            return
-                                except json.JSONDecodeError:
-                                    logger.warning(f"Failed to decode JSON from line: {data}")
-                    else:
+                    if response.status != 200:
                         logger.error(f"Error during LLM request: {response.status} - {await response.text()}")
-                        yield "Sorry, there was an error processing your request."
+                        yield "Извините, произошла ошибка при обработке вашего запроса."
+                        return
+
+                    full_response = ""
+                    async for line in response.content:
+                        line = line.decode('utf-8').strip()
+                        if not line.startswith("data:"):
+                            continue
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            logger.info("Потоковая передача ответа завершена.")
+                            return
+
+                        try:
+                            data_json = json.loads(data)
+                        except json.JSONDecodeError:
+                            logger.warning(f"Не удалось декодировать JSON из строки: {data}")
+                            continue
+
+                        choices = data_json.get('choices')
+                        if not choices:
+                            continue
+                        delta = choices[0].get('delta', {})
+                        content = delta.get('content')
+
+                        if content:
+                            full_response += content
+                            yield content
+
+                        finish_reason = choices[0].get('finish_reason')
+                        if finish_reason == "stop":
+                            logger.info(f"Потоковая передача ответа завершена с причиной остановки. Полный ответ: {full_response}")
+                            return
 
         except Exception as e:
-            logger.error(f"Error during LLM request: {e}")
-            yield "Sorry, there was an error processing your request."
+            logger.error(f"Ошибка во время запроса LLM: {e}")
+            yield "Извините, произошла ошибка при обработке вашего запроса."
