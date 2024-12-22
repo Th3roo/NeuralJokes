@@ -10,11 +10,11 @@ from aiogram.fsm.state import State, StatesGroup
 from src.LLM.LLMRequests import LLMRequester
 from config.config import BOT_JOKE_GENERATION__COOLDOWN, BOT_JOKE_GENERATION__STREAMING_DELAY
 
-# Logger setup
 logger = logging.getLogger(__name__)
 
 class Form(StatesGroup):
     waiting_for_topic = State()
+
 
 class JokeBot:
     def __init__(self, dp: Dispatcher, llm_requester: LLMRequester):
@@ -49,22 +49,19 @@ class JokeBot:
 
             await message.reply(f"Please wait {remaining_time} more seconds before generating another joke.")
             logger.info(f"User {message.from_user.id} requested a joke too soon. Remaining time: {remaining_time} seconds.")
-
             return
 
         self.last_joke_time[user_id] = current_time
-        
-        # Отправляем пользователю сообщение о начале генерации шутки
+
         processing_message = await message.reply("Generating a random joke...")
 
-        # Вызываем функцию для генерации шутки и обновления сообщения в реальном времени
         await self.generate_and_stream_response(processing_message, "Generate a random joke")
 
     async def start_generate_joke_with_topic(self, message: types.Message, state: FSMContext):
         logger.info(f"Received /generate_joke command from user {message.from_user.id}")
-        
-        # Проверяем, есть ли тема в сообщении
+
         command_args = message.text.split(" ", 1)
+
         if len(command_args) > 1:
             await self.generate_joke_with_topic(message, state, command_args[1])
         else:
@@ -81,20 +78,15 @@ class JokeBot:
             await message.reply(f"Please wait {remaining_time} more seconds before generating another joke.")
             logger.info(f"User {message.from_user.id} requested a joke too soon. Remaining time: {remaining_time} seconds.")
             await state.clear()
-
             return
 
         self.last_joke_time[user_id] = current_time
-        
-        # Если тема не передана, берем ее из сообщения
+
         if topic is None:
             topic = message.text
 
         if topic:
-            # Отправляем пользователю сообщение о начале генерации шутки
             processing_message = await message.reply(f"Generating a joke on the topic: {topic}...")
-
-            # Вызываем функцию для генерации шутки и обновления сообщения в реальном времени
             await self.generate_and_stream_response(processing_message, f"Generate a joke on the topic: {topic}")
         else:
             await message.reply("Please specify a topic for the joke after the /generate_joke command.")
@@ -103,28 +95,26 @@ class JokeBot:
         await state.clear()
 
     async def generate_and_stream_response(self, processing_message: types.Message, prompt: str):
-            """
-            Генерирует шутку и обновляет сообщение в реальном времени по мере поступления токенов.
-            """
-            full_response = ""
-            last_sent_message = ""
-            try:
-                async for response_part in self.llm_requester.generate_response_streaming(prompt):
-                    if response_part:
-                        full_response += response_part
-                        # Проверяем, отличается ли новое сообщение от предыдущего отправленного
-                        if full_response != last_sent_message:
-                            try:
-                                # Редактируем сообщение только если оно изменилось
-                                await processing_message.edit_text(full_response)
-                                last_sent_message = full_response
-                            except Exception as e:
-                                if "message is not modified" not in str(e):
-                                    logger.warning(f"Failed to edit message: {e}")
-                        
-                        # Добавляем задержку между обновлениями сообщения
-                        await asyncio.sleep(BOT_JOKE_GENERATION__STREAMING_DELAY)
-                logger.info(f"Completed streaming response for prompt: '{prompt}'")
-            except Exception as e:
-                logger.error(f"Error during streaming response: {e}")
-                await processing_message.edit_text("Извините, произошла ошибка при генерации шутки.")
+        full_response = ""
+        last_sent_message = ""
+
+        try:
+            async for response_part in self.llm_requester.generate_response_streaming(prompt):
+                if response_part:
+                    full_response += response_part
+
+                    if full_response != last_sent_message:
+                        try:
+                            await processing_message.edit_text(full_response)
+                            last_sent_message = full_response
+                        except Exception as e:
+                            if "message is not modified" not in str(e):
+                                logger.warning(f"Failed to edit message: {e}")
+
+                    await asyncio.sleep(BOT_JOKE_GENERATION__STREAMING_DELAY)
+
+            logger.info(f"Completed streaming response for prompt: '{prompt}'")
+
+        except Exception as e:
+            logger.error(f"Error during streaming response: {e}")
+            await processing_message.edit_text("Извините, произошла ошибка при генерации шутки.")

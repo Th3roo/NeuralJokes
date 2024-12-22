@@ -48,13 +48,18 @@ class LLMRequester:
         Генерирует ответ в потоковом режиме, возвращая итератор по частям ответа.
         """
         logger.info("Generating streaming response...")
+
         temperature = temperature or float(os.getenv("BOT_GENERATION__TEMPERATURE", 0.8))
         max_tokens = max_tokens or int(os.getenv("BOT_GENERATION__MAX_TOKENS", 200))
+
         logger.debug(f"Temperature: {temperature}")
         logger.debug(f"Max Tokens: {max_tokens}")
+
         messages = []
+
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
+
         messages.append({"role": "user", "content": user_message})
         logger.debug(f"Messages: {messages}")
 
@@ -71,26 +76,34 @@ class LLMRequester:
                         "messages": messages,
                         "temperature": temperature,
                         "max_tokens": max_tokens,
-                        "stream": True  # Включаем потоковый режим
+                        "stream": True
                     }
                 ) as response:
                     if response.status == 200:
                         full_response = ""
+
                         async for line in response.content:
                             line = line.decode('utf-8').strip()
+
                             if line.startswith("data:"):
                                 data = line[5:].strip()
+
                                 if data == "[DONE]":
                                     logger.info("Streaming response completed.")
                                     return
+
                                 try:
                                     data_json = json.loads(data)
+
                                     if 'choices' in data_json and data_json['choices']:
                                         delta = data_json['choices'][0].get('delta', {})
+
                                         if delta.get('content'):
                                             full_response += delta['content']
                                             yield delta['content']
+
                                         finish_reason = data_json['choices'][0].get('finish_reason')
+
                                         if finish_reason == "stop":
                                             logger.info(f"Streaming response completed with stop reason. Full response: {full_response}")
                                             return
