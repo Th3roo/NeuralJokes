@@ -62,7 +62,7 @@ class LLMRequester:
         else:
             logger.warning("System prompt path not set in environment variables.")
             return ""
-
+        
     async def generate_response_streaming(self, user_message: str, temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> AsyncIterator[str]:
         """Generates a response in streaming mode, returning an iterator over the response parts."""
         logger.info("Generating streaming response...")
@@ -95,7 +95,7 @@ class LLMRequester:
                 ) as response:
                     if response.status != 200:
                         logger.error(f"Error during LLM request: {response.status} - {await response.text()}")
-                        yield "Извините, произошла ошибка при обработке вашего запроса."
+                        yield "Sorry, an error occurred while processing your request."
                         return
 
                     full_response = ""
@@ -105,13 +105,13 @@ class LLMRequester:
                             continue
                         data = line[5:].strip()
                         if data == "[DONE]":
-                            logger.info("Потоковая передача ответа завершена.")
+                            logger.info("Streamed response transmission completed.")
                             return
 
                         try:
                             data_json = json.loads(data)
                         except json.JSONDecodeError:
-                            logger.warning(f"Не удалось декодировать JSON из строки: {data}")
+                            logger.warning(f"Failed to decode JSON from string: {data}")
                             continue
 
                         choices = data_json.get('choices')
@@ -126,9 +126,10 @@ class LLMRequester:
 
                         finish_reason = choices[0].get('finish_reason')
                         if finish_reason == "stop":
-                            logger.info(f"Потоковая передача ответа завершена с причиной остановки. Полный ответ: {full_response}")
+                            logger.info(f"Streamed response transmission completed with stop reason. Full response: {full_response}")
                             return
 
         except Exception as e:
-            logger.error(f"Ошибка во время запроса LLM: {e}")
-            yield "Извините, произошла ошибка при обработке вашего запроса."
+            logger.error(f"Error during LLM request: {e}")
+            yield "Sorry, an error occurred while processing your request."
+
