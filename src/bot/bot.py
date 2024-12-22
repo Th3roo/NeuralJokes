@@ -100,6 +100,7 @@ class JokeBot:
             async for response_part in self.llm_requester.generate_response_streaming(prompt):
                 if response_part:
                     full_response += response_part
+
                     if full_response != last_sent_message:
                         try:
                             await processing_message.edit_text(full_response)
@@ -107,8 +108,15 @@ class JokeBot:
                         except Exception as e:
                             if "message is not modified" not in str(e):
                                 logger.warning(f"Failed to edit message: {e}")
+
                     await asyncio.sleep(BOT_JOKE_GENERATION__STREAMING_DELAY)
+
             logger.info(f"Completed streaming response for prompt: '{prompt}'")
         except Exception as e:
             logger.error(f"Error during streaming response: {e}")
-            await processing_message.edit_text("Sorry, there was an error generating the joke.")
+
+            if "Flood control exceeded" in str(e):
+                await processing_message.edit_text("Failed to generate joke due to rate limit restrictions. Please try again later.")
+                return
+            else:
+                await processing_message.edit_text("Sorry, an error occurred while generating the joke.")
