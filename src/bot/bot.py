@@ -102,12 +102,23 @@ class JokeBot:
         await state.clear()
 
     async def generate_and_stream_response(self, processing_message: types.Message, prompt: str):
-        """
-        Генерирует шутку и обновляет сообщение в реальном времени по мере поступления токенов.
-        """
-        full_response = ""
-        async for response_part in self.llm_requester.generate_response_streaming(prompt):
-            if response_part:
-                full_response += response_part
-                await processing_message.edit_text(full_response)
-        logger.info(f"Completed streaming response for prompt: '{prompt}'")
+            """
+            Генерирует шутку и обновляет сообщение в реальном времени по мере поступления токенов.
+            """
+            full_response = ""
+            last_sent_message = ""
+            try:
+                async for response_part in self.llm_requester.generate_response_streaming(prompt):
+                    if response_part:
+                        full_response += response_part
+                        # Проверяем, отличается ли новое сообщение от предыдущего отправленного
+                        if full_response != last_sent_message:
+                            try:
+                                await processing_message.edit_text(full_response)
+                                last_sent_message = full_response
+                            except Exception as e:
+                                logger.warning(f"Failed to edit message: {e}")
+                logger.info(f"Completed streaming response for prompt: '{prompt}'")
+            except Exception as e:
+                logger.error(f"Error during streaming response: {e}")
+                await processing_message.edit_text("Извините, произошла ошибка при генерации шутки.")
