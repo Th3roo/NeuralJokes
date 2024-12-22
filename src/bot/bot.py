@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 class Form(StatesGroup):
     waiting_for_topic = State()
 
-
 class JokeBot:
     def __init__(self, dp: Dispatcher, llm_requester: LLMRequester):
         self.dp = dp
@@ -35,33 +34,33 @@ class JokeBot:
 
     async def send_welcome(self, message: types.Message):
         logger.info(f"Received /start command from user {message.from_user.id}")
-
         await message.reply("Hi! I'm a bot that can generate jokes. Use the commands /generate_random_joke or /generate_joke <Topic>.")
+
+    async def _check_cooldown(self, user_id: int):
+        """Checks if the user is on cooldown."""
+        current_time = time.time()
+        if user_id in self.last_joke_time and current_time - self.last_joke_time[user_id] < BOT_JOKE_GENERATION__COOLDOWN:
+            remaining_time = int(BOT_JOKE_GENERATION__COOLDOWN - (current_time - self.last_joke_time[user_id]))
+            return remaining_time
+        return None
 
     async def generate_random_joke(self, message: types.Message):
         logger.info(f"Received /generate_random_joke command from user {message.from_user.id}")
 
         user_id = message.from_user.id
-        current_time = time.time()
-
-        if user_id in self.last_joke_time and current_time - self.last_joke_time[user_id] < BOT_JOKE_GENERATION__COOLDOWN:
-            remaining_time = int(BOT_JOKE_GENERATION__COOLDOWN - (current_time - self.last_joke_time[user_id]))
-
+        remaining_time = await self._check_cooldown(user_id)
+        if remaining_time:
             await message.reply(f"Please wait {remaining_time} more seconds before generating another joke.")
             logger.info(f"User {message.from_user.id} requested a joke too soon. Remaining time: {remaining_time} seconds.")
             return
 
-        self.last_joke_time[user_id] = current_time
-
+        self.last_joke_time[user_id] = time.time()
         processing_message = await message.reply("Generating a random joke...")
-
         await self.generate_and_stream_response(processing_message, "Generate a random joke")
 
     async def start_generate_joke_with_topic(self, message: types.Message, state: FSMContext):
         logger.info(f"Received /generate_joke command from user {message.from_user.id}")
-
         command_args = message.text.split(" ", 1)
-
         if len(command_args) > 1:
             await self.generate_joke_with_topic(message, state, command_args[1])
         else:
@@ -69,18 +68,17 @@ class JokeBot:
             await state.set_state(Form.waiting_for_topic)
 
     async def generate_joke_with_topic(self, message: types.Message, state: FSMContext, topic: str = None):
+        logger.info(f"Generating joke with topic for user {message.from_user.id}")
+
         user_id = message.from_user.id
-        current_time = time.time()
-
-        if user_id in self.last_joke_time and current_time - self.last_joke_time[user_id] < BOT_JOKE_GENERATION__COOLDOWN:
-            remaining_time = int(BOT_JOKE_GENERATION__COOLDOWN - (current_time - self.last_joke_time[user_id]))
-
+        remaining_time = await self._check_cooldown(user_id)
+        if remaining_time:
             await message.reply(f"Please wait {remaining_time} more seconds before generating another joke.")
             logger.info(f"User {message.from_user.id} requested a joke too soon. Remaining time: {remaining_time} seconds.")
             await state.clear()
             return
 
-        self.last_joke_time[user_id] = current_time
+        self.last_joke_time[user_id] = time.time()
 
         if topic is None:
             topic = message.text
@@ -102,7 +100,6 @@ class JokeBot:
             async for response_part in self.llm_requester.generate_response_streaming(prompt):
                 if response_part:
                     full_response += response_part
-
                     if full_response != last_sent_message:
                         try:
                             await processing_message.edit_text(full_response)
@@ -110,11 +107,8 @@ class JokeBot:
                         except Exception as e:
                             if "message is not modified" not in str(e):
                                 logger.warning(f"Failed to edit message: {e}")
-
                     await asyncio.sleep(BOT_JOKE_GENERATION__STREAMING_DELAY)
-
             logger.info(f"Completed streaming response for prompt: '{prompt}'")
-
         except Exception as e:
             logger.error(f"Error during streaming response: {e}")
-            await processing_message.edit_text("Извините, произошла ошибка при генерации шутки.")
+            await processing_message.edit_text("Sorry, there was an error generating the joke.")
